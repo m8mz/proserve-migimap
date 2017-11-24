@@ -1,0 +1,31 @@
+#!/bin/bash
+RED="\e[31m"
+GREEN="\e[32m"
+SET="\e[0m"
+
+read -p "Bluehost Username: " bhUser
+migvars=`cat /home/tempeproserve/promig/$bhUser`
+numVars=`echo $migvars | wc -w`
+numLines=`echo $migvars | wc -l`
+numCheck=$(echo "scale=2; $numVars / 6" | bc)
+
+
+if [[ $numCheck =~ ^-?[0-9]+.00$ ]]; then
+  echo "Migrating $numLines email account(s) to Bluehost."
+  { while IFS=' ' read host1 user1 pass1 host2 user2 pass2
+    do
+      imapsync --ssl1 --ssl2 --useuid --automap --nosyncacls --syncinternaldates --logdir /home/tempeproserve/promig/log/${bhUser} --logfile ${user1}.log --pidfile /home/tempeproserve/promig/pid/${bhUser} --pidfilelocking \
+          --host1 $host1 --user1 $user1 --password1 $pass1 \
+          --host2 $host2 --user2 $user2 --password2 $pass2 $@
+    done
+  } < /home/tempeproserve/promig/$bhUser
+  { while IFS=' ' read host1 user1 pass1 host2 user2 pass2
+    do
+      eUser=`echo $user1 | tr [a-z] [A-Z]`
+      echo -e "${GREEN}${eUser}:${SET} "
+      egrep 'Start|Final|Detected|Host1 failure|Host2 failure|Exiting with return value 0' /home/tempeproserve/promig/log/${bhUser}/${user1}.log
+    done
+  } < /home/tempeproserve/promig/$bhUser
+else
+  echo -e "${RED}$Error:${SET} Should be 6 fields for each line in the file. Please review."
+fi
