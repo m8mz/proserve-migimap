@@ -14,16 +14,19 @@ if [[ $numCheck =~ ^-?[0-9]+.00$ ]]; then
   echo -e "\nMigrating $numLines email account(s) to Bluehost."
   { while IFS=' ' read host1 user1 pass1 host2 user2 pass2
     do
-      imapsync --ssl1 --ssl2 --useuid --automap --nosyncacls --syncinternaldates --logdir /home/tempeproserve/promig/log/ --logfile ${user1}.log --pidfile /home/tempeproserve/promig/pid/${user1} --pidfilelocking \
+      imapsync --ssl1 --ssl2 --useuid --automap --nosyncacls --syncinternaldates --logdir /home/tempeproserve/promig/log --logfile ${user1}.log --pidfile /home/tempeproserve/promig/pid/${user1} --pidfilelocking \
           --host1 $host1 --user1 $user1 --password1 $pass1 \
           --host2 $host2 --user2 $user2 --password2 $pass2 $@
     done
   } <<< "$migvars"
+  echo -e "\n====== Results ======"
   { while IFS=' ' read host1 user1 pass1 host2 user2 pass2
     do
       eUser=`echo $user1 | tr [a-z] [A-Z]`
-      echo -e "${GREEN}${eUser}:${SET} "
-      egrep 'Start|Final|Detected|Host1 failure|Host2 failure|Exiting with return value 0' /home/tempeproserve/promig/log/${user1}.log
+      results=`egrep 'Start|Final|Detected|Host1 failure|Host2 failure' /home/tempeproserve/promig/log/${user1}.log | sed 's,Exiting with return value 0,Success,g'`
+      results2=`egrep 'Exiting with return value 0' /home/tempeproserve/promig/log/${user1}.log | sed 's,Exiting with return value 0,Success,g'`
+      [ ! -z "$results2" ] && echo -e "${GREEN}${eUser}: ${results2}${SET}" || echo -e "${GREEN}${eUser}:${SET} ${RED}Failure${SET}"
+      echo -e "\t${results}\n"
     done
   } <<< "$migvars"
 else
